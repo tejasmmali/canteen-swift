@@ -1,6 +1,7 @@
 # Demo Admin ID and Password
 - Email - adminpanel@canteen.on
 - Password - Meow<3@@
+- Demo - https://canteen-swift.vercel.app
 
 # 🍽️ CampusBites - Smart Canteen Ordering System
 
