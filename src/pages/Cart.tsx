@@ -30,15 +30,16 @@ const Cart = () => {
 
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    const order = createOrder(items, customerName.trim(), customerPhone.trim());
-    clearCart();
-    toast.success("Order placed successfully!");
-    navigate(`/track?orderId=${order.id}`);
-    
-    setIsSubmitting(false);
+    try {
+      const order = await createOrder(items, customerName.trim(), customerPhone.trim());
+      clearCart();
+      toast.success("Order placed successfully!");
+      navigate(`/track?orderId=${order.id}`);
+    } catch (error) {
+      console.error("Error placing order:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (items.length === 0) {
