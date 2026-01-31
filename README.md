@@ -1,3 +1,7 @@
+# Demo Admin ID and Password
+- Email - adminpanel@canteen.on
+- Password - Meow<3@@
+
 # 🍽️ CampusBites - Smart Canteen Ordering System
 
 A modern, full-stack digital canteen ordering platform designed to streamline college cafeteria operations with real-time order tracking, secure customer data handling, and role-based admin access.
