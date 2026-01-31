@@ -1,10 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
-import { ChefHat, Clock, CheckCircle2, XCircle, Users, TrendingUp, RefreshCw, ShieldCheck } from "lucide-react";
+import { ChefHat, Clock, CheckCircle2, XCircle, Users, TrendingUp, RefreshCw, ShieldCheck, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminOrderCard } from "@/components/AdminOrderCard";
+import { AdminLogin } from "@/components/AdminLogin";
+import { AdminAccessDenied } from "@/components/AdminAccessDenied";
 import { useOrders } from "@/context/OrderContext";
+import { useAuth } from "@/context/AuthContext";
 import { OrderStatus } from "@/types/canteen";
 import { cn } from "@/lib/utils";
 
@@ -20,12 +23,34 @@ const statusFilters: { status: OrderStatus | "all"; label: string; icon: React.E
 
 const Admin = () => {
   const { adminOrders, isLoading, fetchAdminOrders } = useOrders();
+  const { user, isAdmin, isLoading: authLoading, signOut } = useAuth();
   const [activeFilter, setActiveFilter] = useState<OrderStatus | "all">("all");
 
-  // Fetch admin orders with decrypted data on mount
+  // Fetch admin orders with decrypted data when user is admin
   useEffect(() => {
-    fetchAdminOrders();
-  }, [fetchAdminOrders]);
+    if (isAdmin) {
+      fetchAdminOrders();
+    }
+  }, [fetchAdminOrders, isAdmin]);
+
+  // Show loading state while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Show login if not authenticated
+  if (!user) {
+    return <AdminLogin />;
+  }
+
+  // Show access denied if not admin
+  if (!isAdmin) {
+    return <AdminAccessDenied />;
+  }
 
   const filteredOrders = useMemo(() => {
     if (activeFilter === "all") return adminOrders;
@@ -91,6 +116,10 @@ const Admin = () => {
                 </span>
                 Live Updates
               </Badge>
+              <Button variant="outline" size="sm" onClick={signOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
             </div>
           </div>
         </div>
