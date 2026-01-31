@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { ChefHat, Clock, CheckCircle2, XCircle, Users, TrendingUp, RefreshCw } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { ChefHat, Clock, CheckCircle2, XCircle, Users, TrendingUp, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,45 +19,50 @@ const statusFilters: { status: OrderStatus | "all"; label: string; icon: React.E
 ];
 
 const Admin = () => {
-  const { orders, isLoading } = useOrders();
+  const { adminOrders, isLoading, fetchAdminOrders } = useOrders();
   const [activeFilter, setActiveFilter] = useState<OrderStatus | "all">("all");
 
+  // Fetch admin orders with decrypted data on mount
+  useEffect(() => {
+    fetchAdminOrders();
+  }, [fetchAdminOrders]);
+
   const filteredOrders = useMemo(() => {
-    if (activeFilter === "all") return orders;
-    return orders.filter((order) => order.status === activeFilter);
-  }, [orders, activeFilter]);
+    if (activeFilter === "all") return adminOrders;
+    return adminOrders.filter((order) => order.status === activeFilter);
+  }, [adminOrders, activeFilter]);
 
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: orders.length };
-    orders.forEach((order) => {
+    const counts: Record<string, number> = { all: adminOrders.length };
+    adminOrders.forEach((order) => {
       counts[order.status] = (counts[order.status] || 0) + 1;
     });
     return counts;
-  }, [orders]);
+  }, [adminOrders]);
 
   // Calculate stats
   const todayOrders = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return orders.filter((order) => new Date(order.createdAt) >= today);
-  }, [orders]);
+    return adminOrders.filter((order) => new Date(order.createdAt) >= today);
+  }, [adminOrders]);
 
   const totalRevenue = useMemo(() => {
-    return orders
+    return adminOrders
       .filter((order) => order.status !== "cancelled")
       .reduce((sum, order) => sum + order.totalAmount, 0);
-  }, [orders]);
+  }, [adminOrders]);
 
   const activeOrders = useMemo(() => {
-    return orders.filter(
+    return adminOrders.filter(
       (order) => !["completed", "cancelled"].includes(order.status)
     ).length;
-  }, [orders]);
+  }, [adminOrders]);
 
   const uniqueCustomers = useMemo(() => {
-    const phones = new Set(orders.map((order) => order.customerPhone));
+    const phones = new Set(adminOrders.map((order) => order.customerPhone));
     return phones.size;
-  }, [orders]);
+  }, [adminOrders]);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-background via-muted/30 to-background">
@@ -68,13 +73,17 @@ const Admin = () => {
             <div>
               <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
               <p className="text-muted-foreground mt-1">
-                Real-time order management • {orders.length} total orders
+                Real-time order management • {adminOrders.length} total orders
               </p>
             </div>
             <div className="flex items-center gap-2">
               {isLoading && (
                 <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
               )}
+              <Badge variant="outline" className="text-sm px-3 py-1.5 gap-2">
+                <ShieldCheck className="h-4 w-4 text-success" />
+                Encrypted Data
+              </Badge>
               <Badge variant="outline" className="text-sm px-3 py-1.5">
                 <span className="relative flex h-2 w-2 mr-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
