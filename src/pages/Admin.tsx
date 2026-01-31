@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
-import { ChefHat, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { ChefHat, Clock, CheckCircle2, XCircle, Users, TrendingUp, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminOrderCard } from "@/components/AdminOrderCard";
 import { useOrders } from "@/context/OrderContext";
 import { OrderStatus } from "@/types/canteen";
@@ -10,6 +11,7 @@ import { cn } from "@/lib/utils";
 const statusFilters: { status: OrderStatus | "all"; label: string; icon: React.ElementType }[] = [
   { status: "all", label: "All Orders", icon: ChefHat },
   { status: "pending", label: "Pending", icon: Clock },
+  { status: "confirmed", label: "Confirmed", icon: CheckCircle2 },
   { status: "preparing", label: "Preparing", icon: ChefHat },
   { status: "ready", label: "Ready", icon: CheckCircle2 },
   { status: "completed", label: "Completed", icon: CheckCircle2 },
@@ -17,7 +19,7 @@ const statusFilters: { status: OrderStatus | "all"; label: string; icon: React.E
 ];
 
 const Admin = () => {
-  const { orders } = useOrders();
+  const { orders, isLoading } = useOrders();
   const [activeFilter, setActiveFilter] = useState<OrderStatus | "all">("all");
 
   const filteredOrders = useMemo(() => {
@@ -33,21 +35,114 @@ const Admin = () => {
     return counts;
   }, [orders]);
 
+  // Calculate stats
+  const todayOrders = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return orders.filter((order) => new Date(order.createdAt) >= today);
+  }, [orders]);
+
+  const totalRevenue = useMemo(() => {
+    return orders
+      .filter((order) => order.status !== "cancelled")
+      .reduce((sum, order) => sum + order.totalAmount, 0);
+  }, [orders]);
+
+  const activeOrders = useMemo(() => {
+    return orders.filter(
+      (order) => !["completed", "cancelled"].includes(order.status)
+    ).length;
+  }, [orders]);
+
+  const uniqueCustomers = useMemo(() => {
+    const phones = new Set(orders.map((order) => order.customerPhone));
+    return phones.size;
+  }, [orders]);
+
   return (
-    <div className="min-h-[calc(100vh-4rem)] gradient-warm py-6">
-      <div className="container">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Order Dashboard</h1>
-            <p className="text-muted-foreground">Manage and track all orders</p>
+    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-background via-muted/30 to-background">
+      {/* Admin Header */}
+      <div className="bg-card border-b">
+        <div className="container py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+              <p className="text-muted-foreground mt-1">
+                Real-time order management • {orders.length} total orders
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isLoading && (
+                <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+              )}
+              <Badge variant="outline" className="text-sm px-3 py-1.5">
+                <span className="relative flex h-2 w-2 mr-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                </span>
+                Live Updates
+              </Badge>
+            </div>
           </div>
-          <Badge variant="secondary" className="text-base px-4 py-2">
-            {orders.length} Total Orders
-          </Badge>
+        </div>
+      </div>
+
+      <div className="container py-6 space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Today's Orders
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{todayOrders.length}</div>
+              <p className="text-xs text-muted-foreground">orders placed today</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Active Orders
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">{activeOrders}</div>
+              <p className="text-xs text-muted-foreground">in progress</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                <TrendingUp className="h-4 w-4" />
+                Total Revenue
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-success">₹{totalRevenue}</div>
+              <p className="text-xs text-muted-foreground">all time</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                Unique Customers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{uniqueCustomers}</div>
+              <p className="text-xs text-muted-foreground">by phone number</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Status Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
           {statusFilters.map(({ status, label, icon: Icon }) => (
             <Button
               key={status}
@@ -74,14 +169,23 @@ const Admin = () => {
         </div>
 
         {/* Orders Grid */}
-        {filteredOrders.length > 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="bg-card rounded-2xl h-64 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : filteredOrders.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredOrders.map((order) => (
               <AdminOrderCard key={order.id} order={order} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
+          <div className="text-center py-16 bg-card rounded-2xl">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
               <ChefHat className="h-8 w-8 text-muted-foreground" />
             </div>

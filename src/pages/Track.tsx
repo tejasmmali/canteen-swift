@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Search, ArrowLeft, Package } from "lucide-react";
+import { Search, ArrowLeft, Package, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OrderTracker } from "@/components/OrderTracker";
@@ -9,25 +9,58 @@ import { Order } from "@/types/canteen";
 
 const Track = () => {
   const [searchParams] = useSearchParams();
-  const { getOrderById, orders } = useOrders();
+  const { getOrderById, fetchOrderById, orders } = useOrders();
   const [orderId, setOrderId] = useState(searchParams.get("orderId") || "");
   const [order, setOrder] = useState<Order | undefined>(undefined);
   const [searched, setSearched] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const id = searchParams.get("orderId");
     if (id) {
       setOrderId(id);
+      setIsLoading(true);
+      // First check local state
       const found = getOrderById(id);
-      setOrder(found);
-      setSearched(true);
+      if (found) {
+        setOrder(found);
+        setSearched(true);
+        setIsLoading(false);
+      } else {
+        // Fetch from database
+        fetchOrderById(id).then((dbOrder) => {
+          setOrder(dbOrder || undefined);
+          setSearched(true);
+          setIsLoading(false);
+        });
+      }
     }
-  }, [searchParams, getOrderById, orders]);
+  }, [searchParams, getOrderById, fetchOrderById]);
 
-  const handleSearch = () => {
-    const found = getOrderById(orderId.toUpperCase());
+  // Update order when it changes in context (realtime updates)
+  useEffect(() => {
+    if (orderId) {
+      const found = getOrderById(orderId);
+      if (found) {
+        setOrder(found);
+      }
+    }
+  }, [orders, orderId, getOrderById]);
+
+  const handleSearch = async () => {
+    setIsLoading(true);
+    const searchId = orderId.toUpperCase();
+    
+    // First check local state
+    let found = getOrderById(searchId);
+    if (!found) {
+      // Fetch from database
+      found = (await fetchOrderById(searchId)) || undefined;
+    }
+    
     setOrder(found);
     setSearched(true);
+    setIsLoading(false);
   };
 
   return (
@@ -55,15 +88,25 @@ const Track = () => {
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               className="flex-1"
             />
-            <Button onClick={handleSearch}>
-              <Search className="h-4 w-4 mr-2" />
-              Track
+            <Button onClick={handleSearch} disabled={isLoading}>
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Track
+                </>
+              )}
             </Button>
           </div>
         </div>
 
         {/* Order Status */}
-        {order ? (
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : order ? (
           <div className="animate-slide-up space-y-6">
             <OrderTracker order={order} />
 
