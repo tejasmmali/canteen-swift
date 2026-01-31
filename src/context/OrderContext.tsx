@@ -5,17 +5,19 @@ import { useToast } from "@/hooks/use-toast";
 
 interface OrderContextType {
   orders: Order[];
+  adminOrders: Order[];
   currentOrder: Order | null;
   isLoading: boolean;
   createOrder: (items: CartItem[], customerName: string, customerPhone: string) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   getOrderById: (orderId: string) => Order | undefined;
   fetchOrderById: (orderId: string) => Promise<Order | null>;
+  fetchAdminOrders: () => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
-// Helper to convert database row to Order type
+// Helper to convert database row to Order type (for public view - masked data)
 const mapDbRowToOrder = (row: {
   id: string;
   items: unknown;
@@ -40,15 +42,16 @@ const mapDbRowToOrder = (row: {
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [adminOrders, setAdminOrders] = useState<Order[]>([]);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch all orders
+  // Fetch all orders (public view - masked data)
   const fetchOrders = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from("orders")
+        .from("orders_public")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -58,6 +61,33 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       setOrders(mappedOrders);
     } catch (error) {
       console.error("Error fetching orders:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Fetch admin orders with decrypted data via edge function
+  const fetchAdminOrders = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase.functions.invoke("get-admin-orders");
+
+      if (error) throw error;
+
+      const mappedOrders = (data.orders || []).map((row: any) => ({
+        id: row.id,
+        items: row.items as CartItem[],
+        totalAmount: row.total_amount,
+        status: row.status as OrderStatus,
+        customerName: row.customer_name,
+        customerPhone: row.customer_phone,
+        estimatedTime: row.estimated_time,
+        createdAt: new Date(row.created_at),
+        updatedAt: new Date(row.updated_at),
+      }));
+      setAdminOrders(mappedOrders);
+    } catch (error) {
+      console.error("Error fetching admin orders:", error);
     } finally {
       setIsLoading(false);
     }
@@ -78,24 +108,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         },
         (payload) => {
           console.log("Realtime update:", payload);
-          
-          if (payload.eventType === "INSERT") {
-            const newOrder = mapDbRowToOrder(payload.new as any);
-            setOrders((prev) => [newOrder, ...prev]);
-          } else if (payload.eventType === "UPDATE") {
-            const updatedOrder = mapDbRowToOrder(payload.new as any);
-            setOrders((prev) =>
-              prev.map((order) =>
-                order.id === updatedOrder.id ? updatedOrder : order
-              )
-            );
-            setCurrentOrder((prev) =>
-              prev?.id === updatedOrder.id ? updatedOrder : prev
-            );
-          } else if (payload.eventType === "DELETE") {
-            const deletedId = (payload.old as any).id;
-            setOrders((prev) => prev.filter((order) => order.id !== deletedId));
-          }
+          // Refresh both views on any change
+          fetchOrders();
+          fetchAdminOrders();
         }
       )
       .subscribe();
@@ -103,7 +118,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchOrders]);
+  }, [fetchOrders, fetchAdminOrders]);
 
   const createOrder = useCallback(
     async (items: CartItem[], customerName: string, customerPhone: string): Promise<Order> => {
@@ -137,7 +152,19 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      const newOrder = mapDbRowToOrder(data);
+      // Create order object with original (unmasked) data for the current customer
+      const newOrder: Order = {
+        id: data.id,
+        items: items,
+        totalAmount: totalAmount,
+        status: "pending" as OrderStatus,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        estimatedTime: estimatedTime,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at),
+      };
+
       setCurrentOrder(newOrder);
       return newOrder;
     },
@@ -145,12 +172,22 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateOrderStatus = useCallback(async (orderId: string, status: OrderStatus) => {
-    const { error } = await supabase
-      .from("orders")
-      .update({ status })
-      .eq("id", orderId);
+    try {
+      const { error } = await supabase.functions.invoke("admin-update-order", {
+        body: { orderId, status },
+      });
 
-    if (error) {
+      if (error) throw error;
+
+      // Update local state
+      setAdminOrders((prev) =>
+        prev.map((order) =>
+          order.id === orderId
+            ? { ...order, status, updatedAt: new Date() }
+            : order
+        )
+      );
+    } catch (error) {
       toast({
         title: "Error",
         description: "Failed to update order status.",
@@ -161,13 +198,13 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   }, [toast]);
 
   const getOrderById = useCallback(
-    (orderId: string) => orders.find((o) => o.id === orderId),
-    [orders]
+    (orderId: string) => orders.find((o) => o.id === orderId) || adminOrders.find((o) => o.id === orderId),
+    [orders, adminOrders]
   );
 
   const fetchOrderById = useCallback(async (orderId: string): Promise<Order | null> => {
     const { data, error } = await supabase
-      .from("orders")
+      .from("orders_public")
       .select("*")
       .eq("id", orderId)
       .single();
@@ -185,12 +222,14 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     <OrderContext.Provider
       value={{
         orders,
+        adminOrders,
         currentOrder,
         isLoading,
         createOrder,
         updateOrderStatus,
         getOrderById,
         fetchOrderById,
+        fetchAdminOrders,
       }}
     >
       {children}

@@ -18,7 +18,9 @@ export type Database = {
         Row: {
           created_at: string
           customer_name: string
+          customer_name_encrypted: string | null
           customer_phone: string
+          customer_phone_encrypted: string | null
           estimated_time: number
           id: string
           items: Json
@@ -29,7 +31,9 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_name: string
+          customer_name_encrypted?: string | null
           customer_phone: string
+          customer_phone_encrypted?: string | null
           estimated_time: number
           id: string
           items: Json
@@ -40,7 +44,9 @@ export type Database = {
         Update: {
           created_at?: string
           customer_name?: string
+          customer_name_encrypted?: string | null
           customer_phone?: string
+          customer_phone_encrypted?: string | null
           estimated_time?: number
           id?: string
           items?: Json
@@ -52,10 +58,82 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      orders_admin: {
+        Row: {
+          created_at: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          estimated_time: number | null
+          id: string | null
+          items: Json | null
+          status: string | null
+          total_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_name?: never
+          customer_phone?: never
+          estimated_time?: number | null
+          id?: string | null
+          items?: Json | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_name?: never
+          customer_phone?: never
+          estimated_time?: number | null
+          id?: string | null
+          items?: Json | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      orders_public: {
+        Row: {
+          created_at: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          estimated_time: number | null
+          id: string | null
+          items: Json | null
+          status: string | null
+          total_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_name?: never
+          customer_phone?: never
+          estimated_time?: number | null
+          id?: string | null
+          items?: Json | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_name?: never
+          customer_phone?: never
+          estimated_time?: number | null
+          id?: string | null
+          items?: Json | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      decrypt_text: { Args: { encrypted_text: string }; Returns: string }
+      encrypt_text: { Args: { plain_text: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
