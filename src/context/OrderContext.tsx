@@ -17,8 +17,29 @@ interface OrderContextType {
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
-// Helper to convert database row to Order type (for public view - masked data)
-const mapDbRowToOrder = (row: {
+// Helper to convert public view row to Order type (no customer data)
+const mapPublicRowToOrder = (row: {
+  id: string;
+  items: unknown;
+  total_amount: number;
+  status: string;
+  estimated_time: number;
+  created_at: string;
+  updated_at: string;
+}): Order => ({
+  id: row.id,
+  items: row.items as CartItem[],
+  totalAmount: row.total_amount,
+  status: row.status as OrderStatus,
+  customerName: "***",
+  customerPhone: "***",
+  estimatedTime: row.estimated_time,
+  createdAt: new Date(row.created_at),
+  updatedAt: new Date(row.updated_at),
+});
+
+// Helper to convert admin view row to Order type (with decrypted customer data)
+const mapAdminRowToOrder = (row: {
   id: string;
   items: unknown;
   total_amount: number;
@@ -47,7 +68,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch all orders (public view - masked data)
+  // Fetch all orders (public view - no customer data)
   const fetchOrders = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -57,7 +78,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      const mappedOrders = (data || []).map(mapDbRowToOrder);
+      const mappedOrders = (data || []).map(mapPublicRowToOrder);
       setOrders(mappedOrders);
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -74,17 +95,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      const mappedOrders = (data.orders || []).map((row: any) => ({
-        id: row.id,
-        items: row.items as CartItem[],
-        totalAmount: row.total_amount,
-        status: row.status as OrderStatus,
-        customerName: row.customer_name,
-        customerPhone: row.customer_phone,
-        estimatedTime: row.estimated_time,
-        createdAt: new Date(row.created_at),
-        updatedAt: new Date(row.updated_at),
-      }));
+      const mappedOrders = (data.orders || []).map((row: any) => mapAdminRowToOrder(row));
       setAdminOrders(mappedOrders);
     } catch (error) {
       console.error("Error fetching admin orders:", error);
@@ -136,8 +147,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
           items: items as unknown as any,
           total_amount: totalAmount,
           status: "pending",
-          customer_name: customerName,
-          customer_phone: customerPhone,
+          customer_name_encrypted: customerName, // Will be encrypted by trigger
+          customer_phone_encrypted: customerPhone, // Will be encrypted by trigger
           estimated_time: estimatedTime,
         })
         .select()
@@ -207,13 +218,13 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       .from("orders_public")
       .select("*")
       .eq("id", orderId)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       return null;
     }
 
-    const order = mapDbRowToOrder(data);
+    const order = mapPublicRowToOrder(data);
     setCurrentOrder(order);
     return order;
   }, []);

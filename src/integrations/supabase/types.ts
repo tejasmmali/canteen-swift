@@ -17,9 +17,7 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
-          customer_name: string
           customer_name_encrypted: string | null
-          customer_phone: string
           customer_phone_encrypted: string | null
           estimated_time: number
           id: string
@@ -30,9 +28,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          customer_name: string
           customer_name_encrypted?: string | null
-          customer_phone: string
           customer_phone_encrypted?: string | null
           estimated_time: number
           id: string
@@ -43,9 +39,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          customer_name?: string
           customer_name_encrypted?: string | null
-          customer_phone?: string
           customer_phone_encrypted?: string | null
           estimated_time?: number
           id?: string
@@ -97,8 +91,6 @@ export type Database = {
       orders_public: {
         Row: {
           created_at: string | null
-          customer_name: string | null
-          customer_phone: string | null
           estimated_time: number | null
           id: string | null
           items: Json | null
@@ -108,8 +100,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          customer_name?: never
-          customer_phone?: never
           estimated_time?: number | null
           id?: string | null
           items?: Json | null
@@ -119,8 +109,6 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          customer_name?: never
-          customer_phone?: never
           estimated_time?: number | null
           id?: string | null
           items?: Json | null
