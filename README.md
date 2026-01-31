@@ -1,73 +1,187 @@
-# Welcome to your Lovable project
+# 🍽️ CampusBites - Smart Canteen Ordering System
 
-## Project info
+A modern, full-stack digital canteen ordering platform designed to streamline college cafeteria operations with real-time order tracking, secure customer data handling, and role-based admin access.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss)
+![Supabase](https://img.shields.io/badge/Supabase-Backend-3FCF8E?logo=supabase)
 
-## How can I edit this code?
+## ✨ Features
 
-There are several ways of editing your application.
+### 👤 Customer Experience
+- **Digital Menu** - Browse categorized food items with images, descriptions, and pricing
+- **Smart Cart** - Add items, adjust quantities, and view real-time totals
+- **Quick Checkout** - Simple order placement with name and phone number
+- **Order Tracking** - Real-time status updates from pending to ready for pickup
 
-**Use Lovable**
+### 🔐 Security & Privacy
+- **PII Encryption** - Customer names and phone numbers are encrypted at rest using PGP symmetric encryption
+- **Role-Based Access Control** - Admin/staff roles with secure authentication
+- **RLS Policies** - Row-level security ensures data protection at the database level
+- **Secure API** - Edge functions validate JWT tokens and user roles before exposing sensitive data
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 👨‍💼 Admin Dashboard
+- **Order Management** - View all orders with decrypted customer information
+- **Status Updates** - Progress orders through workflow (Pending → Confirmed → Preparing → Ready → Completed)
+- **Real-time Sync** - Live updates across all connected clients via Supabase Realtime
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🛠️ Tech Stack
 
-**Use your preferred IDE**
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, Vite |
+| Styling | Tailwind CSS, shadcn/ui |
+| State | React Context, TanStack Query |
+| Backend | Supabase (Lovable Cloud) |
+| Database | PostgreSQL with RLS |
+| Auth | Supabase Auth with RBAC |
+| Functions | Deno Edge Functions |
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 📁 Project Structure
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```
+src/
+├── components/          # Reusable UI components
+│   ├── ui/             # shadcn/ui components
+│   ├── Header.tsx      # Navigation header
+│   ├── MenuCard.tsx    # Food item display
+│   ├── CartItem.tsx    # Cart line items
+│   └── AdminOrderCard.tsx
+├── context/            # React Context providers
+│   ├── AuthContext.tsx # Authentication state
+│   ├── CartContext.tsx # Shopping cart state
+│   └── OrderContext.tsx # Order management
+├── pages/              # Route pages
+│   ├── Index.tsx       # Menu/home page
+│   ├── Cart.tsx        # Shopping cart
+│   ├── Track.tsx       # Order tracking
+│   └── Admin.tsx       # Admin dashboard
+├── data/               # Static data
+│   └── menuData.ts     # Menu items
+├── types/              # TypeScript definitions
+│   └── canteen.ts      # Domain types
+└── integrations/       # External integrations
+    └── supabase/       # Auto-generated client
 
-Follow these steps:
+supabase/
+├── functions/          # Edge Functions
+│   ├── get-admin-orders/   # Fetch orders with decrypted PII
+│   └── admin-update-order/ # Update order status
+└── migrations/         # Database migrations
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+ and npm
+- A Lovable account (backend is auto-provisioned)
+
+### Local Development
+
+```bash
+# Clone the repository
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
+# Navigate to project
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app will be available at `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🔑 Admin Access Setup
 
-**Use GitHub Codespaces**
+1. **Sign up** at `/admin` with your email
+2. **Verify** your email address
+3. **Grant admin role** via SQL (one-time setup):
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```sql
+-- Find your user ID from auth.users, then:
+INSERT INTO user_roles (user_id, role) 
+VALUES ('your-user-id', 'admin');
+```
 
-## What technologies are used for this project?
+## 📊 Database Schema
 
-This project is built with:
+### Tables
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+| Table | Purpose |
+|-------|---------|
+| `orders` | Core orders with encrypted customer data |
+| `user_roles` | RBAC role assignments |
 
-## How can I deploy this project?
+### Views
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+| View | Purpose |
+|------|---------|
+| `orders_public` | Public tracking (no PII) |
+| `orders_admin` | Admin view with decrypted PII |
 
-## Can I connect a custom domain to my Lovable project?
+### Security Functions
 
-Yes, you can!
+- `encrypt_text(text)` - PGP encryption for PII
+- `decrypt_text(text)` - PGP decryption (requires vault key)
+- `has_role(role, user_id)` - Role verification
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🔒 Security Architecture
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Frontend (React)                      │
+├─────────────────────────────────────────────────────────┤
+│  Public Views          │  Admin Views                   │
+│  - Menu browsing       │  - Requires authentication     │
+│  - Order placement     │  - Role validation (JWT)       │
+│  - Status tracking     │  - Decrypted PII access        │
+└─────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────┐
+│                   Edge Functions                         │
+│  - JWT verification                                      │
+│  - Role-based access control                            │
+│  - Service role for sensitive operations                │
+└─────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────┐
+│                   PostgreSQL + RLS                       │
+│  - Row-level security policies                          │
+│  - Encrypted PII columns                                │
+│  - Secure views for data access                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+## 📱 Pages
+
+| Route | Description |
+|-------|-------------|
+| `/` | Menu browsing with category filters |
+| `/cart` | Shopping cart and checkout |
+| `/track` | Order status tracking |
+| `/admin` | Staff dashboard (protected) |
+
+## 🎨 Design System
+
+The project uses a custom design system built on Tailwind CSS with semantic color tokens:
+
+- `--primary` / `--primary-foreground` - Brand colors
+- `--secondary` / `--muted` - Supporting colors  
+- `--destructive` - Error states
+- `--success` - Success states
+
+All colors support light and dark mode.
+
+## 📄 License
+
+This project is private and proprietary.
+
+---
+
+Built with ❤️ using [Lovable](https://lovable.dev)
