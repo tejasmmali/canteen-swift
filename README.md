@@ -185,7 +185,7 @@ All colors support light and dark mode.
 
 ## 📄 License
 
-This project is private and proprietary.
+This project is OpenSorce.
 
 ---
 
